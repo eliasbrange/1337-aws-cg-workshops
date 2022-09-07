@@ -36,7 +36,7 @@ You can avoid having to copy access keys back and forth between the AWS Manageme
 
 Create a file `~/.aws/credentials` if it doesn't exist. Open the file and add the following:
 
-```toml
+```
 [your-profile-name]
 sso_start_url = https://tretton37.awsapps.com/start
 sso_region = eu-north-1
