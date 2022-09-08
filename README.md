@@ -20,6 +20,8 @@ To save time in the workshops, please complete this steps before the first works
    yarn global add aws-cdk
    ```
 
+1. Install [Docker](https://docs.docker.com/get-docker/)
+
 1. Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 
    - Will be used to run Lambda functions locally
