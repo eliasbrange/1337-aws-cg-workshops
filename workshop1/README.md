@@ -1,3 +1,0 @@
-# Workshop 1: Getting Started
-
-COMING SOON...
