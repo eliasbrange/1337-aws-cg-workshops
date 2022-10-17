@@ -1,0 +1,38 @@
+{
+  "name": "src",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "src": "bin/src.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "integration": "jest -c jest.config.integration.js",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.102",
+    "@types/jest": "^27.5.2",
+    "@types/node": "10.17.27",
+    "@types/prettier": "2.6.0",
+    "@types/uuid": "^8.3.4",
+    "aws-cdk": "2.38.1",
+    "axios": "^0.27.2",
+    "constructs": "^10.0.0",
+    "esbuild": "0",
+    "jest": "^27.5.1",
+    "prettier": "2.7.1",
+    "ts-jest": "^27.1.4",
+    "ts-node": "^10.9.1",
+    "typescript": "~3.9.7"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.163.0",
+    "@aws-sdk/lib-dynamodb": "^3.163.0",
+    "aws-cdk-lib": "2.38.1",
+    "source-map-support": "^0.5.21",
+    "uuid": "^8.3.2"
+  }
+}
