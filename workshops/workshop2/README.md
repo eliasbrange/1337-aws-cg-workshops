@@ -425,11 +425,11 @@ For simplicity, all events should have the same payload:
 
 ```json
 {
-  "todoId": "string";
-  "name": "string";
-  "completed": true;
-  "createdAt": 123456789;
-  "updatedAt": 123456789;
+  "todoId": "string",
+  "name": "string",
+  "completed": true,
+  "createdAt": 123456789,
+  "updatedAt": 123456789
 }
 ```
 
