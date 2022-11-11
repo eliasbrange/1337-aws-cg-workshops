@@ -2,6 +2,12 @@
 
 ## 1. Introduction
 
+In this workshop you will add a scalable import process to your todo service. While doing this, you will learn how to use **AWS S3** and **S3 Event Notifications** together with **Lambda functions** and **SQS Queues**. You will see how the queue will act as a buffer for data to be imported. This creates a more scalable solution than simply writing to DynamoDB in the first Lambda function.
+
+Imagine that the data store for your service was a relational database that cannot scale on demand. If you suddenly get a large influx of files to import, the Lambda service would happily scale out to as many concurrent invocations as needed. This could potentially overload the backing database, resulting in errors and data loss. There is also a limitation on Lambda that a function can run for a maximum of 15 minutes.
+
+By using a queue as a buffer, you can control the speed at which items are read from the queue and thus control the load on downstream services. It also lets you add retry mechanisms and dead-letter queues to be able to gracefully handle errors.
+
 ![Workshop 3 Diagram](workshop3.diagram.png)
 
 ### What is S3?
@@ -115,7 +121,7 @@ bucket.addEventNotification(
     TodoAppStack.TodoImportBucketOutput = todoappstack-todoimportbucket9bc2d041-12345678  <--
     ```
 
-2.  Either tail the logs with the `sam cli` or find the logs of your newly deployed **S3ToSqs** function. You can tail the logs with the following command:
+2.  Either tail the logs with the `sam cli` or find the logs of your newly deployed **S3ToSqs** function in the CloudWatch console. You can tail the logs with the following command:
 
     ```
     sam logs --stack-name TodoAppStack --tail
@@ -137,7 +143,7 @@ bucket.addEventNotification(
     todo10
     ```
 
-4.  Upload this file to S3 by using the `aws cli`:
+4.  Upload this file to S3 by using the `aws cli` in another terminal than the one you are tailing logs in:
 
     ```bash
     $ aws s3 cp todos.csv s3://todoappstack-todoimportbucket9bc2d041-12345678/import/todos.csv
@@ -353,10 +359,158 @@ Navigate to the [SQS console](https://eu-west-1.console.aws.amazon.com/sqs/v2/ho
 
 ## 9. Create Lambda function to handle SQS events
 
-Now that you have messages waiting on the queue, 
+Now that you have messages waiting on the queue, let's create a Lambda function that can take care of them. Create a new sub-folder named `sqsToDynamo` in the `functions` directory and create a `handler.ts` file. Add the following:
+
+```typescript
+import { SQSEvent } from "aws-lambda";
+
+export const handler = async function (event: SQSEvent): Promise<void> {
+  for (const record of event.Records) {
+    console.log(record);
+  }
+};
+```
+
+Add the function to the CDK application in `lib/todo-app-stack.ts`:
+
+```typescript
+const sqsToDynamo = new NodejsFunction(this, "SqsToDynamoFunction", {
+  entry: "functions/sqsToDynamo/handler.ts",
+  ...commonFunctionProps,
+  timeout: cdk.Duration.seconds(60),
+  environment: {
+    TABLE_NAME: table.tableName,
+  },
+});
+```
 
 ## 10. Set up integration between SQS and SqsToDynamo function
 
-## 11. Update SqsToDynamo configuration and permissions
+Now you need to hook up the Lambda function to the SQS queue. In `lib/todo-app-stack.ts`, update the import from `aws-cdk-lib/aws-lambda-event-sources` to include `SqsEventSource`. Then, add the integration construct:
+
+```typescript
+// SQS integration
+sqsToDynamo.addEventSource(
+  new SqsEventSource(queue, {
+    batchSize: 5,
+  })
+);
+```
+
+The `batchSize` tells our Lambda function how many messages to pull for each invocation.
+
+### Test the integration
+
+You know this by now. Deploy the application and tail the logs or head over to cloudwatch. Upload a file to S3 again. If everything works as expected the following should now happen:
+
+1. A file is uploaded.
+1. An S3 notification is sent to the S3ToSqs function.
+1. The function downloads the file and parses it.
+1. For each CSV row in the file, it sends a message to SQS.
+1. The messages in SQS is read by the **SqsToDynamo** function.
+
+Right now, the **SqsToDynamo** function only logs the incoming messages. You should see log entries with the following structure:
+
+```
+2022-11-11T13:05:44.369Z        615d81a2-a669-5ce8-95c5-da4aec818340  INFO    {
+  messageId: '...',
+  receiptHandle: '...',
+  body: '{"name":"todo9"}',
+  attributes: {
+    ApproximateReceiveCount: '3',
+    AWSTraceHeader: '...',
+    SentTimestamp: '1668170043744',
+    SenderId: '...',
+    ApproximateFirstReceiveTimestamp: '1668170272088'
+  },
+  messageAttributes: {},
+  md5OfBody: '...',
+  eventSource: 'aws:sqs',
+  eventSourceARN: '...',
+  awsRegion: 'eu-west-1'
+}
+```
+
+## 11. Grant write permissions to the SqsToDynamo function
+
+You need to grant permissions to the **SqsToDynamo** function so that it can write todo items to the DynamoDB table. In `lib/todo-app-stack.ts`, add the following line next to the rest of the runtime permissions:
+
+```typescript
+table.grantWriteData(sqsToDynamo);
+```
 
 ## 12. Update SqsToDynamo function to write items to DynamoDB
+
+Your function now consumes all messages that arrive on the queue. Let's persist those to the DynamoDB table. You should be able to take inspiration from the **CreateTodo** function on how to do this. They will be quite similar, but in this case you have a different event source (`SQSEvent` vs `APIGatewayProxyEvent`).
+
+You will want to the following for **each** record in the incoming event:
+
+1. Parse the message body (`record.body`).
+1. Get the todo `name` from the parsed body.
+1. Generate a unique ID, as done in **CreateTodo**.
+1. Get the current timestamp which will be used for the `updatedAt` and `createdAt` fields.
+1. Set `completed` to `false`.
+1. Persist the item to the DynamoDB table.
+
+**Getting stuck? There is a spoiler below:**
+
+<details>
+<summary>SqsToDynamo function handler spoiler</summary>
+
+```typescript
+import { SQSEvent } from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { v4 as uuidv4 } from "uuid";
+
+const TABLE_NAME = process.env.TABLE_NAME || "";
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+type Record = {
+  name: string;
+};
+
+export const handler = async function (event: SQSEvent): Promise<void> {
+  for (const record of event.Records) {
+    const data = JSON.parse(record.body) as Record;
+    console.log(`Importing todo item with name "${data.name}"`);
+
+    const timestamp = new Date().getTime();
+
+    const item = {
+      todoId: uuidv4(),
+      name: data.name,
+      completed: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    await client.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: item,
+      })
+    );
+
+    console.log(`Todo ${item.todoId} created successfully`);
+  }
+};
+```
+
+</details>
+
+## 13. Showtime
+
+That's it. Deploy your application again and open up the DynamoDB console. Upload a CSV file with todo items again. You should almost instantly be able to see the imported items in your table. You can also query the **ListTodo** endpoint of your API to see them.
+
+## Bonus content
+
+If you managed to get this far with time to spare there are some improvements to look into:
+
+### A. More CSV columns
+
+Perhaps you would like to be able to import todo items with a known ID, creation time or completion status. Perhaps you want to add a completely new field. How would you go about supporting that?
+
+### B. Limit throughput
+
+Let's imagine that your table has limited provisioned capacity. It can only handle small concurrent loads. You only want one invocation of the **SqsToDynamo** function active at any point in time. How can you accomplish this?
