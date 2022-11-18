@@ -27,7 +27,7 @@ export class TodoAppStack extends cdk.Stack {
 
     // SNS Topic
     const topic = new Topic(this, 'TodoEventTopic');
-    topic.addSubscription(new EmailSubscription('elias.brange@gmail.com'));
+    topic.addSubscription(new EmailSubscription('your@email.com'));
 
     // DynamoDB Table
     const table = new Table(this, 'TodoTable', {
