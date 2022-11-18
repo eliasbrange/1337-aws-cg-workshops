@@ -316,7 +316,7 @@ export const handler = async function (event: S3Event): Promise<void> {
     });
 
     // Loop over the CSV rows in the stream
-    for (const row of csvStream) {
+    for await (const row of csvStream) {
       console.log(`Adding todo "${row.name}" to queue.`);
       // Send each row in the CSV to SQS
       await sqsClient.send(
