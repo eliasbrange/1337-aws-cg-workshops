@@ -510,7 +510,3 @@ If you managed to get this far with time to spare there are some improvements to
 ### A. More CSV columns
 
 Perhaps you would like to be able to import todo items with a known ID, creation time or completion status. Perhaps you want to add a completely new field. How would you go about supporting that?
-
-### B. Limit throughput
-
-Let's imagine that your table has limited provisioned capacity. It can only handle small concurrent loads. You only want one invocation of the **SqsToDynamo** function active at any point in time. How can you accomplish this?
