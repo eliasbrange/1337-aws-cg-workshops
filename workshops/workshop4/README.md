@@ -94,3 +94,11 @@ NOTE: Be careful when creating the role's trust policy. Anyone with access to th
 
 - [Blog post by yours truly on setting up OIDC](https://www.eliasbrange.dev/posts/secure-aws-deploys-from-github-actions-with-oidc/)
 - [GitHub Actions docs](https://docs.github.com/en/actions)
+
+### Testing the API
+
+We haven't touched on the subject of testing during the workshops. One thing you could look into is integration tests for the Rest API using `jest` or some other tool. You could write tests for all the routes and ensure they return the correct data structure and status codes. You can also test that you get validation errors when the payload has the wrong format or is missing entirely.
+
+**Resources**
+
+- [Jest getting started documentation](https://jestjs.io/docs/getting-started)
