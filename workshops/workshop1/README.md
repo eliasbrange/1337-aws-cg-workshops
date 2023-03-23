@@ -309,17 +309,7 @@ As I mentioned earlier, CDK includes high-level components called constructs. Th
    ```bash
    $ http https://abcdefghi.execute-api.eu-west-1.amazonaws.com/prod/todo/12345
    HTTP/1.1 200 OK
-   Connection: keep-alive
-   Content-Length: 26
-   Content-Type: application/json
-   Date: Tue, 06 Sep 2022 16:41:47 GMT
-   Via: 1.1 ff7194a111d1912088727cbee9f13db0.cloudfront.net (CloudFront)
-   X-Amz-Cf-Id: xlLVvwAHbg94c_JDo_KYvZp2wvGm8TrIThzGGCiu5lXqaprCutN6XA==
-   X-Amz-Cf-Pop: ARN56-P1
-   X-Amzn-Trace-Id: Root=1-6317784b-7b93f9515ba11d2c382b5c4a;Sampled=0
-   X-Cache: Miss from cloudfront
-   x-amz-apigw-id: YC-73GnaDoEF7Eg=
-   x-amzn-RequestId: 5666c97c-942b-4383-b4b2-dfbc6518c271
+   ...
 
    Hello from GET /todo/12345
    ```
@@ -548,17 +538,7 @@ Deploy your application with `cdk deploy` and try it out. Everything will surely
 ```bash
 $ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo name="name"
 HTTP/1.1 502 Bad Gateway
-Connection: keep-alive
-Content-Length: 36
-Content-Type: application/json
-Date: Tue, 06 Sep 2022 20:14:04 GMT
-Via: 1.1 9803a30a87f1ec1047cb2b8ad5ecc43e.cloudfront.net (CloudFront)
-X-Amz-Cf-Id: C5xSly4TA1BvudKUfYLIcb9VZ-jw1kiVqHzKtvgyrLbxsk07byt4wg==
-X-Amz-Cf-Pop: ARN56-P1
-X-Cache: Error from cloudfront
-x-amz-apigw-id: YDeB5Gb6DoEFp5A=
-x-amzn-ErrorType: InternalServerErrorException
-x-amzn-RequestId: 6400a316-c186-44e3-b604-d1bc60b62f1e
+...
 
 {
     "message": "Internal server error"
@@ -605,17 +585,7 @@ Deploy your stack and try out the create endpoint again. Note that it can take a
 ```bash
 $ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo name="name"
 HTTP/1.1 201 Created
-Connection: keep-alive
-Content-Length: 133
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 05:58:55 GMT
-Via: 1.1 d71a7f4027481327b033ea7bb8ffab7a.cloudfront.net (CloudFront)
-X-Amz-Cf-Id: GWkHI3-dMKK7SonxAPz2iFwZrXtNfJO9r25OSLHXiBHGXF-GwHtZoA==
-X-Amz-Cf-Pop: ARN56-P1
-X-Amzn-Trace-Id: Root=1-6318331e-379e9e2f2866421c38320147;Sampled=0
-X-Cache: Miss from cloudfront
-x-amz-apigw-id: YEzswFGjjoEFVqg=
-x-amzn-RequestId: f6dd9c8d-a46d-4670-bb94-a41991513347
+...
 
 {
     "completed": false,
@@ -631,77 +601,12 @@ Nice! Verify that the validation works as expected as well by calling the endpoi
 ```bash
 $ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo field="value"
 HTTP/1.1 400 Bad Request
-Connection: keep-alive
-Content-Length: 32
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 06:17:20 GMT
-Via: 1.1 d7969a7dfe0a063d186d3c72531d67be.cloudfront.net (CloudFront)
-X-Amz-Cf-Id: bYOQYyPDWytYA2DBgj2q8eMyRtXSrWojwq4GHX3t8VNK6TOU3wyOVw==
-X-Amz-Cf-Pop: ARN56-P1
-X-Amzn-Trace-Id: Root=1-63183770-7a2c804e0ac7ca0b1ab09db2;Sampled=0
-X-Cache: Error from cloudfront
-x-amz-apigw-id: YE2ZkGn0DoEFjoQ=
-x-amzn-RequestId: 72655f4d-ae27-483d-b1b9-5481d321ff07
+...
 
 Missing name property in payload
 ```
 
-## 8. Speeding up the development cycle
-
-Up until now you have deployed the entire CDK application to your AWS account whenever you have made a change. Now, you will see how you can use the **AWS SAM CLI** to run your API locally. SAM is another tool that makes it easier to build, deploy, and manage serverless applications on AWS. [This blog post](https://aws.amazon.com/blogs/compute/better-together-aws-sam-and-aws-cdk/) has an in-depth description about how CDK and SAM works together.
-
-When running locally, SAM emulates your API Gateway and Lambda functions. Other resources, such as your DynamoDB table will not be running locally. Any writes you perform in your Lambda function will be reflected in your deployed table.
-
-Since you define the table name as an environment variable, you need to create a local environment file for SAM to use. Create a file named `.env.local.json` and add the following:
-
-```json
-{
-  "Parameters": {
-    "TABLE_NAME": "YOUR_TABLE_NAME"
-  }
-}
-```
-
-You can find your table name in the AWS Management Console. Find your stack in the CloudFormation console, click on the _Resources_ tab and look for a resource with a _Logical ID_ starting with `TodoTable`. You want the _Physical ID_ of this resource.
-
-Now, in another terminal (make sure you have active AWS credentials):
-
-```bash
-$ cdk synth
-...
-$ sam local start-api -t cdk.out/TodoAppStack.template.json --env-vars .env.local.json
-
-Mounting ListTodoFunction0D379A45 at http://127.0.0.1:3000/todo [GET]
-Mounting CreateTodoFunction483A09B6 at http://127.0.0.1:3000/todo [POST]
-Mounting GetTodoFunction77C0DE28 at http://127.0.0.1:3000/todo/{todoId} [GET]
-Mounting UpdateTodoFunction6CD7583A at http://127.0.0.1:3000/todo/{todoId} [PATCH]
-Mounting DeleteTodoFunction199B584C at http://127.0.0.1:3000/todo/{todoId} [DELETE]
-
-...
-```
-
-`cdk synth` will synthesize your CDK application into CloudFormation templates. SAM is then able to use this CloudFormation template to use it's local functionality. You can now call your API locally on port `3000`. Whenever you make a change in a Lambda function, you have to `cdk synth` again before running `sam local start-api`.
-
-Try creating a to-do item through your local API:
-
-```bash
-$ http post http://localhost:3000/todo name=keso
-HTTP/1.0 201 CREATED
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 07:02:18 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
-
-{
-    "completed": false,
-    "createdAt": 1662534137392,
-    "name": "keso",
-    "todoId": "ef2fd1cd-9f64-4097-8cee-2f55dcc99ae2",
-    "updatedAt": 1662534137392
-}
-```
-
-## 9. GetTodo Lambda
+## 8. GetTodo Lambda
 
 Continue with the GetTodo function. This function should fetch a to-do item with a specific `todoId` from the table. If no item is returned, it means that it does not exist, and in that case you want to return a `404 NOT FOUND`.
 
@@ -758,21 +663,12 @@ export const handler = async function (
 
 </details>
 
-Re-build and start the API locally:
+Re-deploy your application and create a new to-do item and take note of the generated `todoId`. Then fetch that todo with the `GET /todo/{todoId}` endpoint:
 
 ```bash
-$ cdk synth && sam local start-api -t cdk.out/TodoAppStack.template.json --env-vars .env.local.json
-```
-
-First, create a new to-do item and take note of the generated `todoId`. Then fetch that todo with the `GET /todo/{todoId}` endpoint:
-
-```bash
-$ http post http://localhost:3000/todo name=keso
-HTTP/1.0 201 CREATED
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 09:39:39 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+$ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo name="keso"
+HTTP/1.1 201 Created
+...
 
 {
     "completed": false,
@@ -782,12 +678,9 @@ Server: Werkzeug/1.0.1 Python/3.9.7
     "updatedAt": 1662543577655
 }
 
-$ http http://localhost:3000/todo/3eccce10-026d-45dc-ad4f-7bf309ac6eb3
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/3eccce10-026d-45dc-ad4f-7bf309ac6eb3
 HTTP/1.0 200 OK
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 09:40:00 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": false,
@@ -798,7 +691,7 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 ```
 
-## 10. DeleteTodo Lambda
+## 9. DeleteTodo Lambda
 
 The `DELETE /todo/{todoId}` route should delete the specified to-do item if it exists. If it does not exist, you want to return a `404 NOT FOUND` status. The DynamoDB `DeleteItem` operation is idempotent, meaning that if you run it multiple times on the same item it will not result in an error response. So, to be able to catch the case when an item does not exist, you will use a `ConditionExpression` in the operation. [The docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html) has more information about condition expressions.
 
@@ -859,15 +752,12 @@ export const handler = async function (
 
 </details>
 
-Try it out locally or by deploying the CDK application:
+Try it out by deploying the CDK application:
 
 ```bash
-$ http post http://localhost:3000/todo name=keso
+$ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo name=keso
 HTTP/1.0 201 CREATED
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:04:13 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": false,
@@ -877,12 +767,9 @@ Server: Werkzeug/1.0.1 Python/3.9.7
     "updatedAt": 1662559451751
 }
 
-$ http http://localhost:3000/todo/7d20e102-1c02-474e-b270-853914852356
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/7d20e102-1c02-474e-b270-853914852356
 HTTP/1.0 200 OK
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:04:24 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": false,
@@ -892,25 +779,20 @@ Server: Werkzeug/1.0.1 Python/3.9.7
     "updatedAt": 1662559451751
 }
 
-$ http delete http://localhost:3000/todo/7d20e102-1c02-474e-b270-853914852356
+$ http delete https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/7d20e102-1c02-474e-b270-853914852356
 HTTP/1.0 204 NO CONTENT
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:04:29 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
-$ http http://localhost:3000/todo/7d20e102-1c02-474e-b270-853914852356
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/7d20e102-1c02-474e-b270-853914852356
 HTTP/1.0 404 NOT FOUND
-Content-Length: 71
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:04:33 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "error": "Todo with ID 7d20e102-1c02-474e-b270-853914852356 not found"
 }
 ```
 
-## 11. UpdateTodo Lambda
+## 10. UpdateTodo Lambda
 
 A user can now create, get, and delete to-do items. But what good is that if they cannot update them to flag them as completed? The `PATCH /todo/{todoId}` endpoint should accept a payload with one of (or both) `name` and `completed` attributes. A `400 BAD REQUEST` should be returned if the payload contains neither. If a to-do with the specified id does not exist, return a `404 NOT FOUND`. When an item is updated, the `updatedAt` field should be updated as well to the current timestamp.
 
@@ -1044,12 +926,9 @@ export const handler = async function (
 Try it out:
 
 ```bash
-$ http post http://localhost:3000/todo name=keso
+$ http post https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo name=keso
 HTTP/1.0 201 CREATED
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:24:27 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": false,
@@ -1060,12 +939,9 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 
 
-$ http http://localhost:3000/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d
 HTTP/1.0 200 OK
-Content-Length: 132
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:24:39 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": false,
@@ -1076,21 +952,16 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 
 
-$ http patch http://localhost:3000/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d name=keso2 completed:=true
+$ http patch https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d name=keso2 completed:=true
 HTTP/1.0 204 NO CONTENT
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:24:59 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 
 
 
-$ http http://localhost:3000/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo/aca6841a-8965-4b07-b9c9-8310c7e65f3d
 HTTP/1.0 200 OK
-Content-Length: 133
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 14:25:06 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
     "completed": true,
@@ -1103,7 +974,7 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 
 The `completed`, `name`, and `updatedAt` fields have all been updated.
 
-## 12. ListTodos Lambda
+## 11. ListTodos Lambda
 
 Time for the final route, `GET /todo`, which will list all of your to-do items. If you are better at making lists than checking things off the list, you might find yourself with a large amount of items after a while. DynamoDB has a 1MB limit of returned data per read operation, which means you will have to implement pagination.
 
@@ -1183,15 +1054,12 @@ const decodeToken = (base64: string): Record<string, any> => {
 
 </details>
 
-As before, deploy your application or run it locally and try it out. If you have followed along with the examples earlier, you should have a few to-do items in your table.
+As before, deploy your application and try it out. If you have followed along with the examples earlier, you should have a few to-do items in your table.
 
 ```bash
-$ http http://localhost:3000/todo
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo
 HTTP/1.0 200 OK
-Content-Length: 686
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 15:38:50 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
   "items": [
@@ -1234,12 +1102,9 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 
 
-$ http http://localhost:3000/todo limit==3
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo limit==3
 HTTP/1.0 200 OK
-Content-Length: 499
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 15:39:04 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
   "items": [
@@ -1269,12 +1134,9 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 
 
-$ http http://localhost:3000/todo limit==3 next_token==eyJ0b2RvSWQiOiI5MjRmYjIzNC0wMjkwLTRkNTAtYjdhMi0yNGQ4OWI5YmVlNWUifQ==
+$ http https://abcdefghij.execute-api.eu-west-1.amazonaws.com/prod/todo limit==3 next_token==eyJ0b2RvSWQiOiI5MjRmYjIzNC0wMjkwLTRkNTAtYjdhMi0yNGQ4OWI5YmVlNWUifQ==
 HTTP/1.0 200 OK
-Content-Length: 281
-Content-Type: application/json
-Date: Wed, 07 Sep 2022 15:39:12 GMT
-Server: Werkzeug/1.0.1 Python/3.9.7
+...
 
 {
   "items": [
@@ -1296,7 +1158,7 @@ Server: Werkzeug/1.0.1 Python/3.9.7
 }
 ```
 
-## 13. Summary
+## 12. Summary
 
 Well done for making it this far! Let's recap what you have done.
 
